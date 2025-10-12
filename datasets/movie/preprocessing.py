@@ -5,7 +5,7 @@ import re
 import itertools
 import torch
 
-from minilm.models import vocabs
+from minilm.core import vocabs
 
 def printLines(file, n=10):
     with open(file, 'rb') as datafile:
@@ -170,7 +170,7 @@ def outputVar(l, voc):
     return padVar, mask, max_target_len
 
 # Returns all items for a given batch of pairs
-def batch2TrainData(voc, pair_batch):
+def batch2TokenizedData(voc, pair_batch):
     pair_batch.sort(key=lambda x: len(x[0].split(" ")), reverse=True)
     input_batch, output_batch = [], []
     for pair in pair_batch:
@@ -179,6 +179,29 @@ def batch2TrainData(voc, pair_batch):
     inp, lengths = inputVar(input_batch, voc)
     output, mask, max_target_len = outputVar(output_batch, voc)
     return inp, lengths, output, mask, max_target_len
+
+def createBatches(ds, batch_size, numIters=-1):
+  if numIters == -1:
+    numIters = len(ds) // batch_size
+  assert numIters > 0
+  res = []
+  for i in range(numIters):
+    res.append([
+      ds[(i*batch_size+j)%len(ds)]
+      for j in range(batch_size)
+    ])
+  return res
+  
+  
+def trainEvalSplit(ds, key_fn):
+  train_ds = []
+  eval_ds = []
+  for d in ds:
+    if hash(key_fn(d)) % 10 == 0:
+      eval_ds.append(d)
+    else:
+      train_ds.append(d)
+  return train_ds, eval_ds
 
 
 
